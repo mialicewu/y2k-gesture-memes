@@ -209,8 +209,8 @@ function drawLandmarks(ctx, width, height, handResults, faceResults) {
     for (const [a, b] of FACE_MESH) {
       const p1 = landmarks[a];
       const p2 = landmarks[b];
-      ctx.moveTo((1 - p1.x) * width, p1.y * height);
-      ctx.lineTo((1 - p2.x) * width, p2.y * height);
+      ctx.moveTo(p1.x * width, p1.y * height);
+      ctx.lineTo(p2.x * width, p2.y * height);
     }
     ctx.stroke();
   }
@@ -220,14 +220,14 @@ function drawLandmarks(ctx, width, height, handResults, faceResults) {
     for (const [a, b] of HAND_CONNECTIONS) {
       const p1 = landmarks[a];
       const p2 = landmarks[b];
-      ctx.moveTo((1 - p1.x) * width, p1.y * height);
-      ctx.lineTo((1 - p2.x) * width, p2.y * height);
+      ctx.moveTo(p1.x * width, p1.y * height);
+      ctx.lineTo(p2.x * width, p2.y * height);
     }
     ctx.stroke();
 
     for (const point of landmarks) {
       ctx.beginPath();
-      ctx.arc((1 - point.x) * width, point.y * height, 3, 0, Math.PI * 2);
+      ctx.arc(point.x * width, point.y * height, 3, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -404,7 +404,7 @@ async function boot() {
   await loadMemes();
   populateHelp();
   bindEvents();
-  document.getElementById("meme-image").src = asset("memes/smile.svg");
+  document.getElementById("meme-image").src = asset("memes/user/cover_mouth-1.webp");
 
   const clock = document.getElementById("clock");
   const tick = () => {
