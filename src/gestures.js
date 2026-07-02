@@ -6,6 +6,11 @@ const FINGER = {
   pinky: { tip: 20, pip: 18, mcp: 17 },
 };
 
+const POSE_KEYS = new Set([
+  "cover_mouth", "thumbs_up", "peace_sign", "wave", "facepalm", "thinking",
+  "pointing", "shrug", "stop", "celebrate", "timeout", "angry_pose",
+]);
+
 function dist(a, b) {
   return Math.hypot(a.x - b.x, a.y - b.y);
 }
@@ -21,27 +26,23 @@ function isFingerExtended(hand, finger) {
   const mcpLm = hand[mcp];
 
   if (finger === "thumb") {
-    const indexMcp = hand[5];
-    return dist(tipLm, indexMcp) > dist(pipLm, indexMcp) * 1.1;
+    return dist(tipLm, hand[5]) > dist(pipLm, hand[5]) * 1.05;
   }
 
-  return tipLm.y < pipLm.y && pipLm.y < mcpLm.y + 0.03;
-}
-
-function isFingerCurled(hand, finger) {
-  return !isFingerExtended(hand, finger);
+  return tipLm.y < pipLm.y + 0.01 && pipLm.y < mcpLm.y + 0.04;
 }
 
 function countExtended(hand) {
   return Object.keys(FINGER).filter((f) => isFingerExtended(hand, f)).length;
 }
 
+function isFist(hand) {
+  return countExtended(hand) <= 1;
+}
+
 function nearPoint(hand, point, threshold = 0.12) {
-  return (
-    dist(handCenter(hand), point) < threshold ||
-    dist(hand[8], point) < threshold ||
-    dist(hand[9], point) < threshold ||
-    dist(hand[0], point) < threshold
+  return [handCenter(hand), hand[8], hand[9], hand[0], hand[4]].some(
+    (p) => dist(p, point) < threshold
   );
 }
 
@@ -59,184 +60,167 @@ function headYaw(faceLandmarks) {
   const leftEye = fl[33];
   const rightEye = fl[263];
   const nose = fl[1];
-  const eyeCenterX = (leftEye.x + rightEye.x) / 2;
-  return Math.abs(nose.x - eyeCenterX);
+  return Math.abs(nose.x - (leftEye.x + rightEye.x) / 2);
 }
 
-function handsBehindHead(hands, faceLandmarks) {
-  if (hands.length < 2 || !faceLandmarks.length) return false;
+function addScore(scores, key, value) {
+  if (value <= 0) return;
+  scores[key] = Math.max(scores[key] ?? 0, Math.min(value, 1));
+}
+
+function scoreHandPoses(hands, faceLandmarks, scores) {
+  if (!faceLandmarks.length) return;
   const fl = faceLandmarks[0];
-  const leftTemple = fl[234];
-  const rightTemple = fl[454];
+  const mouth = {
+    x: (fl[13].x + fl[14].x) / 2,
+    y: (fl[13].y + fl[14].y) / 2,
+  };
   const forehead = fl[10];
   const chin = fl[152];
+  const leftTemple = fl[234];
+  const rightTemple = fl[454];
+  const thinkingPoint = {
+    x: (chin.x + fl[13].x) / 2,
+    y: chin.y + (fl[13].y - chin.y) * 0.35,
+  };
+  const chest = {
+    x: (leftTemple.x + rightTemple.x) / 2,
+    y: (leftTemple.y + rightTemple.y) / 2 + 0.1,
+  };
 
-  let leftUp = false;
-  let rightUp = false;
   for (const hand of hands) {
-    const wrist = hand[0];
-    if (wrist.y < chin.y - 0.05 && nearPoint(hand, leftTemple, 0.18)) leftUp = true;
-    if (wrist.y < chin.y - 0.05 && nearPoint(hand, rightTemple, 0.18)) rightUp = true;
-    if (wrist.y < forehead.y + 0.03 && nearPoint(hand, forehead, 0.16)) {
-      leftUp = true;
-      rightUp = true;
+    const mouthDist = Math.min(
+      dist(handCenter(hand), mouth),
+      dist(hand[8], mouth),
+      dist(hand[9], mouth)
+    );
+    if (mouthDist < 0.22) addScore(scores, "cover_mouth", 1 - mouthDist / 0.22);
+
+    const foreheadDist = Math.min(dist(handCenter(hand), forehead), dist(hand[8], forehead));
+    if (foreheadDist < 0.2) addScore(scores, "facepalm", 1 - foreheadDist / 0.2);
+
+    const thinkDist = Math.min(dist(handCenter(hand), thinkingPoint), dist(hand[8], thinkingPoint));
+    if (thinkDist < 0.18 && countExtended(hand) <= 3) {
+      addScore(scores, "thinking", 1 - thinkDist / 0.18);
     }
-  }
-  return leftUp && rightUp;
-}
 
-function bothHandsUp(hands, faceLandmarks) {
-  if (hands.length < 2 || !faceLandmarks.length) return false;
-  const fl = faceLandmarks[0];
-  const brow = fl[10];
-  const h0 = handCenter(hands[0]);
-  const h1 = handCenter(hands[1]);
-  return (
-    h0.y < brow.y + 0.08 &&
-    h1.y < brow.y + 0.08 &&
-    countExtended(hands[0]) >= 3 &&
-    countExtended(hands[1]) >= 3
-  );
-}
+    if (isFingerExtended(hand, "index") && !isFingerExtended(hand, "middle")) {
+      const chestDist = Math.min(dist(hand[8], chest), dist(handCenter(hand), chest));
+      if (chestDist < 0.2) addScore(scores, "pointing", 1 - chestDist / 0.2);
+    }
 
-function detectHandPose(hand, faceLandmarks) {
-  const extended = countExtended(hand);
+    if (isFingerExtended(hand, "thumb") && countExtended(hand) <= 2) {
+      addScore(scores, "thumbs_up", 0.75);
+    }
 
-  if (faceLandmarks?.length) {
-    const fl = faceLandmarks[0];
-    const upperLip = fl[13];
-    const lowerLip = fl[14];
-    const mouth = { x: (upperLip.x + lowerLip.x) / 2, y: (upperLip.y + lowerLip.y) / 2 };
-    const forehead = fl[10];
-    const chin = fl[152];
-    const thinkingPoint = {
-      x: (chin.x + upperLip.x) / 2,
-      y: chin.y + (upperLip.y - chin.y) * 0.35,
-    };
-    const chest = { x: (fl[234].x + fl[454].x) / 2, y: (fl[234].y + fl[454].y) / 2 + 0.08 };
+    if (isFingerExtended(hand, "index") && isFingerExtended(hand, "middle") && countExtended(hand) <= 3) {
+      addScore(scores, "peace_sign", 0.8);
+    }
 
-    if (nearPoint(hand, mouth, 0.16)) return "cover_mouth";
-    if (nearPoint(hand, forehead, 0.14)) return "facepalm";
-    if (nearPoint(hand, thinkingPoint, 0.12) && extended <= 2) return "thinking";
-    if (
-      isFingerExtended(hand, "index") &&
-      isFingerCurled(hand, "middle") &&
-      nearPoint(hand, chest, 0.14)
-    ) {
-      return "pointing";
+    const extended = countExtended(hand);
+    if (extended >= 4) {
+      addScore(scores, "wave", 0.55 + extended * 0.05);
+      if (hand[9].z < hand[0].z - 0.02) addScore(scores, "stop", 0.7);
     }
   }
 
-  const thumbUp =
-    isFingerExtended(hand, "thumb") &&
-    isFingerCurled(hand, "index") &&
-    isFingerCurled(hand, "middle") &&
-    isFingerCurled(hand, "ring") &&
-    isFingerCurled(hand, "pinky");
+  if (hands.length >= 2) {
+    const h0 = hands[0];
+    const h1 = hands[1];
+    const c0 = handCenter(h0);
+    const c1 = handCenter(h1);
+    const highEnough = c0.y < chin.y && c1.y < chin.y;
 
-  const peace =
-    isFingerExtended(hand, "index") &&
-    isFingerExtended(hand, "middle") &&
-    isFingerCurled(hand, "ring") &&
-    isFingerCurled(hand, "pinky");
+    if (highEnough) {
+      const nearHead =
+        nearPoint(h0, leftTemple, 0.22) ||
+        nearPoint(h0, rightTemple, 0.22) ||
+        nearPoint(h0, forehead, 0.2) ||
+        nearPoint(h1, leftTemple, 0.22) ||
+        nearPoint(h1, rightTemple, 0.22) ||
+        nearPoint(h1, forehead, 0.2);
 
-  const stop =
-    extended >= 4 &&
-    Math.abs(hand[9].z - hand[0].z) < 0.06 &&
-    hand[9].y > hand[0].y - 0.05;
+      if (nearHead) addScore(scores, "surprised", 0.82);
+      if (c0.y < forehead.y + 0.06 && c1.y < forehead.y + 0.06) {
+        addScore(scores, "celebrate", 0.78);
+      }
 
-  if (thumbUp) return "thumbs_up";
-  if (peace) return "peace_sign";
-  if (stop) return "stop";
-  if (extended >= 4) return "wave";
+      if (isFist(h0) && isFist(h1) && c0.y < chest.y && c1.y < chest.y) {
+        addScore(scores, "angry_pose", 0.85);
+        addScore(scores, "angry", 0.7);
+      }
 
-  return null;
+      if (c0.y < leftTemple.y + 0.08 && c1.y < rightTemple.y + 0.08) {
+        addScore(scores, "shrug", 0.72);
+      }
+
+      const hHand = countExtended(h0) >= 4 ? h0 : countExtended(h1) >= 4 ? h1 : null;
+      const vHand = hHand === h0 ? h1 : hHand === h1 ? h0 : null;
+      if (hHand && vHand && countExtended(vHand) >= 3) {
+        addScore(scores, "timeout", 0.75);
+      }
+    }
+  }
 }
 
-function detectHandPoses(handResults, faceLandmarks) {
-  const hands = handResults?.landmarks ?? [];
-
-  if (handsBehindHead(hands, faceLandmarks)) return "surprised";
-  if (bothHandsUp(hands, faceLandmarks)) return "celebrate";
-
-  if (hands.length >= 2 && faceLandmarks.length > 0) {
-    const fl = faceLandmarks[0];
-    const leftShoulder = { x: fl[234]?.x ?? 0.25, y: fl[234]?.y ?? 0.75 };
-    const rightShoulder = { x: fl[454]?.x ?? 0.75, y: fl[454]?.y ?? 0.75 };
-    const h0 = handCenter(hands[0]);
-    const h1 = handCenter(hands[1]);
-    const bothUp = h0.y < leftShoulder.y + 0.05 && h1.y < rightShoulder.y + 0.05;
-    const bothOpen = countExtended(hands[0]) >= 3 && countExtended(hands[1]) >= 3;
-    if (bothUp && bothOpen) return "shrug";
-  }
-
-  for (const hand of hands) {
-    const pose = detectHandPose(hand, faceLandmarks);
-    if (pose) return pose;
-  }
-
-  return null;
-}
-
-function detectExpression(faceResults) {
-  const map = blendshapeMap(faceResults);
-  if (!Object.keys(map).length) return null;
+function scoreExpressions(map, faceLandmarks, scores) {
+  if (!Object.keys(map).length) return;
 
   const smile = ((map.mouthSmileLeft ?? 0) + (map.mouthSmileRight ?? 0)) / 2;
   const frown = ((map.mouthFrownLeft ?? 0) + (map.mouthFrownRight ?? 0)) / 2;
   const jawOpen = map.jawOpen ?? 0;
-  const browInnerUp = map.browInnerUp ?? 0;
   const browDown = ((map.browDownLeft ?? 0) + (map.browDownRight ?? 0)) / 2;
   const eyeWide = ((map.eyeWideLeft ?? 0) + (map.eyeWideRight ?? 0)) / 2;
   const pucker = map.mouthPucker ?? 0;
   const sneer = ((map.noseSneerLeft ?? 0) + (map.noseSneerRight ?? 0)) / 2;
   const squintL = map.eyeSquintLeft ?? 0;
   const squintR = map.eyeSquintRight ?? 0;
-  const yaw = headYaw(faceResults.faceLandmarks);
+  const yaw = headYaw(faceLandmarks);
 
-  const candidates = [];
+  if (smile > 0.18 && frown < 0.25 && jawOpen < 0.45) addScore(scores, "smile", smile);
+  if (jawOpen > 0.28 && eyeWide > 0.18) addScore(scores, "surprised", jawOpen * 0.55 + eyeWide * 0.45);
+  if (browDown > 0.2 || sneer > 0.12) addScore(scores, "angry", browDown * 0.6 + sneer * 0.4 + jawOpen * 0.2);
+  if (frown > 0.18 && smile < 0.25) addScore(scores, "sad", frown);
+  if (pucker > 0.28) addScore(scores, "kiss", pucker);
+  if (jawOpen > 0.35 && smile > 0.12) addScore(scores, "tongue_out", jawOpen * 0.65 + smile * 0.35);
 
-  if (yaw > 0.018 && Math.abs(squintL - squintR) > 0.08) {
-    candidates.push(["side_eye", yaw + Math.abs(squintL - squintR)]);
+  if (yaw > 0.008 || Math.abs(squintL - squintR) > 0.05) {
+    addScore(scores, "side_eye", yaw * 8 + Math.abs(squintL - squintR));
   }
-
-  if (jawOpen > 0.5 && eyeWide > 0.35) {
-    candidates.push(["surprised", jawOpen * 0.6 + eyeWide * 0.4]);
-  }
-
-  if (browDown > 0.35 && sneer > 0.15 && jawOpen > 0.25) {
-    candidates.push(["angry", browDown * 0.5 + jawOpen * 0.3 + sneer * 0.2]);
-  }
-
-  if (frown > 0.35 && smile < 0.15) {
-    candidates.push(["sad", frown]);
-  }
-
-  if (pucker > 0.42 && jawOpen < 0.3) {
-    candidates.push(["kiss", pucker]);
-  }
-
-  if (jawOpen > 0.55 && smile > 0.2) {
-    candidates.push(["tongue_out", jawOpen * 0.7 + smile * 0.3]);
-  }
-
-  if (smile > 0.38 && frown < 0.2 && jawOpen < 0.35) {
-    candidates.push(["smile", smile]);
-  }
-
-  if (!candidates.length) return null;
-  candidates.sort((a, b) => b[1] - a[1]);
-  return candidates[0][0];
 }
 
 export function detectMatch(handResults, faceResults) {
+  const scores = {};
   const faceLandmarks = faceResults?.faceLandmarks ?? [];
-  const handPose = detectHandPoses(handResults, faceLandmarks);
-  const expression = detectExpression(faceResults);
+  const hands = handResults?.landmarks ?? [];
 
-  if (handPose) return { key: handPose, kind: "pose" };
-  if (expression) return { key: expression, kind: "expression" };
-  return null;
+  scoreHandPoses(hands, faceLandmarks, scores);
+  scoreExpressions(blendshapeMap(faceResults), faceLandmarks, scores);
+
+  if (scores.cover_mouth >= 0.45) {
+    delete scores.smile;
+    delete scores.kiss;
+  }
+
+  let bestKey = null;
+  let bestScore = 0.28;
+
+  for (const [key, score] of Object.entries(scores)) {
+    if (score > bestScore) {
+      bestKey = key;
+      bestScore = score;
+    }
+  }
+
+  if (!bestKey) return null;
+
+  if (bestKey === "angry_pose") bestKey = "angry";
+
+  return {
+    key: bestKey,
+    kind: POSE_KEYS.has(bestKey) ? "pose" : "expression",
+    score: bestScore,
+  };
 }
 
 export const DEFAULT_LABELS = {

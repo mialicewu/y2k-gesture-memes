@@ -27,7 +27,7 @@ let faceLandmarker = null;
 let memeCatalog = {};
 let stableMatch = null;
 let stableCount = 0;
-const STABLE_FRAMES = 6;
+const STABLE_FRAMES = 2;
 
 const state = {
   running: false,
@@ -39,15 +39,8 @@ const state = {
 function buildUI() {
   document.getElementById("app").innerHTML = `
     <div class="desktop">
-      <aside class="desktop-icons">
-        <button class="desktop-icon" type="button" data-action="help">
-          <span class="icon icon-help"></span>
-          <span>Help</span>
-        </button>
-      </aside>
-
       <main class="desktop-windows">
-        <div class="window webcam-window" id="webcam-window">
+        <div class="window app-window webcam-window">
           <div class="title-bar">
             <div class="title-bar-text">
               <span class="title-icon title-icon-webcam"></span>
@@ -59,32 +52,24 @@ function buildUI() {
               <button aria-label="Close"></button>
             </div>
           </div>
-          <div class="window-body webcam-body">
+          <div class="window-body panel-body">
             <div class="video-shell">
               <div class="video-mirror">
                 <video id="video" playsinline muted autoplay></video>
                 <canvas id="overlay"></canvas>
               </div>
-              <div class="gesture-badge" id="gesture-badge">Click Start Camera</div>
-              <div class="status-pill" id="status-pill">Camera off</div>
+              <div class="gesture-badge hidden" id="gesture-badge"></div>
               <div class="scanlines"></div>
             </div>
-            <fieldset class="controls-fieldset">
-              <legend>Controls</legend>
-              <div class="field-row">
-                <button id="start-btn" type="button">Start Camera</button>
-                <button id="overlay-btn" type="button">Hide Overlay</button>
-              </div>
-              <p class="hint">Pose + expression both work. Try smiling, winking, thumbs up, or covering your mouth.</p>
-            </fieldset>
           </div>
-          <div class="status-bar">
-            <p class="status-bar-field" id="mode-label">Pose + Face</p>
+          <div class="status-bar compact-bar">
+            <button id="start-btn" type="button">Start Camera</button>
+            <button id="overlay-btn" type="button">Overlay</button>
             <p class="status-bar-field" id="fps-label">0 FPS</p>
           </div>
         </div>
 
-        <div class="window memes-window" id="memes-window">
+        <div class="window app-window memes-window">
           <div class="title-bar">
             <div class="title-bar-text">
               <span class="title-icon title-icon-memes"></span>
@@ -96,28 +81,8 @@ function buildUI() {
               <button aria-label="Close"></button>
             </div>
           </div>
-          <div class="window-body meme-body">
-            <div class="sticker-frame">
-              <img id="meme-image" alt="Matching reaction meme" />
-              <div class="sticker-shadow"></div>
-            </div>
-            <p class="meme-caption" id="meme-caption">Make a pose or face to summon a sticker</p>
-          </div>
-        </div>
-
-        <div class="window help-window hidden" id="help-window">
-          <div class="title-bar">
-            <div class="title-bar-text">Help — Poses &amp; Expressions</div>
-            <div class="title-bar-controls">
-              <button aria-label="Close" data-close="help-window"></button>
-            </div>
-          </div>
-          <div class="window-body help-body">
-            <p><strong>Poses</strong></p>
-            <ul class="gesture-list" id="pose-list"></ul>
-            <p><strong>Expressions</strong></p>
-            <ul class="gesture-list" id="expression-list"></ul>
-            <p class="hint">Add images to <code>public/memes/</code> and edit <code>memes.json</code>.</p>
+          <div class="window-body panel-body meme-body">
+            <img id="meme-image" alt="Matching reaction meme" />
           </div>
         </div>
       </main>
@@ -136,31 +101,10 @@ function buildUI() {
   `;
 }
 
-function setBadge(text) {
-  document.getElementById("gesture-badge").textContent = text;
-}
-
-function setStatus(text) {
-  document.getElementById("status-pill").textContent = text;
-}
-
-function populateHelp() {
-  const poses = document.getElementById("pose-list");
-  const expressions = document.getElementById("expression-list");
-  if (!poses || !expressions) return;
-
-  poses.innerHTML = "";
-  expressions.innerHTML = "";
-
-  for (const [key, entry] of Object.entries(memeCatalog)) {
-    const label = entry.label || DEFAULT_LABELS[key] || key;
-    const li = `<li><strong>${label}</strong></li>`;
-    if (entry.kind === "expression") {
-      expressions.innerHTML += li;
-    } else {
-      poses.innerHTML += li;
-    }
-  }
+function setBadge(text, visible = true) {
+  const badge = document.getElementById("gesture-badge");
+  badge.textContent = text;
+  badge.classList.toggle("hidden", !visible || !text);
 }
 
 async function loadMemes() {
@@ -181,11 +125,11 @@ function labelFor(key) {
 
 function showMeme(match) {
   const img = document.getElementById("meme-image");
-  const caption = document.getElementById("meme-caption");
   const path = getMemePath(match.key);
   if (!img || !path) return;
 
-  const kind = match.kind === "expression" ? "expression" : "pose";
+  setBadge(labelFor(match.key), true);
+
   if (img.dataset.matchKey !== match.key) {
     img.dataset.matchKey = match.key;
     img.src = path;
@@ -193,7 +137,6 @@ function showMeme(match) {
     void img.offsetWidth;
     img.classList.add("pop");
   }
-  caption.textContent = `${labelFor(match.key)} (${kind}) detected!`;
 }
 
 function drawLandmarks(ctx, width, height, handResults, faceResults) {
@@ -262,14 +205,12 @@ async function createLandmarkers(delegate) {
 
 async function initModels() {
   if (state.modelsReady) return;
-  setStatus("Loading AI models…");
   try {
     await createLandmarkers("GPU");
   } catch {
     await createLandmarkers("CPU");
   }
   state.modelsReady = true;
-  setStatus("AI ready — strike a pose!");
 }
 
 async function openCamera() {
@@ -279,7 +220,6 @@ async function openCamera() {
     throw new Error("Camera API not available. Open the site over HTTPS.");
   }
 
-  setStatus("Requesting camera…");
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({
@@ -294,8 +234,6 @@ async function openCamera() {
   video.srcObject = stream;
   state.cameraStream = stream;
   await video.play();
-  setBadge("Camera live — loading AI…");
-  setStatus("Camera on");
 }
 
 function startLoop() {
@@ -331,10 +269,6 @@ function startLoop() {
         drawLandmarks(ctx, overlay.width, overlay.height, handResults, faceResults);
 
         if (match) {
-          setBadge(labelFor(match.key));
-          document.getElementById("mode-label").textContent =
-            match.kind === "expression" ? "Expression" : "Pose";
-
           if (match.key === stableMatch?.key) {
             stableCount += 1;
           } else {
@@ -342,14 +276,13 @@ function startLoop() {
             stableCount = 1;
           }
 
-          if (stableCount >= STABLE_FRAMES) {
+          if (stableCount >= STABLE_FRAMES || match.score >= 0.65) {
             showMeme(match);
           }
         } else {
           stableMatch = null;
           stableCount = 0;
-          setBadge("Watching… smile or strike a pose");
-          document.getElementById("mode-label").textContent = "Pose + Face";
+          setBadge("", false);
         }
       } else {
         ctx.clearRect(0, 0, overlay.width, overlay.height);
@@ -371,14 +304,11 @@ async function startApp() {
     await openCamera();
     startLoop();
     await initModels();
-    setBadge("Watching… smile or strike a pose");
-    btn.textContent = "Camera Running";
+    btn.textContent = "Live";
   } catch (err) {
     console.error(err);
     btn.disabled = false;
-    btn.textContent = "Retry Camera";
-    setBadge("Camera failed");
-    setStatus(err.message || "Allow camera access and retry");
+    btn.textContent = "Retry";
   }
 }
 
@@ -387,22 +317,13 @@ function bindEvents() {
 
   document.getElementById("overlay-btn").addEventListener("click", () => {
     state.showOverlay = !state.showOverlay;
-    document.getElementById("overlay-btn").textContent = state.showOverlay ? "Hide Overlay" : "Show Overlay";
-  });
-
-  document.querySelector('[data-action="help"]')?.addEventListener("click", () => {
-    document.getElementById("help-window").classList.remove("hidden");
-  });
-
-  document.querySelector('[data-close="help-window"]')?.addEventListener("click", () => {
-    document.getElementById("help-window").classList.add("hidden");
+    document.getElementById("overlay-btn").textContent = state.showOverlay ? "Overlay" : "No Overlay";
   });
 }
 
 async function boot() {
   buildUI();
   await loadMemes();
-  populateHelp();
   bindEvents();
   document.getElementById("meme-image").src = asset("memes/user/cover_mouth-1.webp");
 
