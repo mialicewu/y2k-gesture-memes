@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <rect width="400" height="400" rx="24" fill="#b3e5fc"/>
+  <circle cx="200" cy="180" r="95" fill="#81d4fa"/>
+  <ellipse cx="200" cy="210" rx="72" ry="82" fill="#e1f5fe"/>
+  <path d="M120 105 Q200 45 280 105" stroke="#0277bd" stroke-width="10" fill="none"/>
+  <ellipse cx="165" cy="170" rx="18" ry="22" fill="#fff"/>
+  <ellipse cx="235" cy="170" rx="18" ry="22" fill="#fff"/>
+  <circle cx="165" cy="175" r="8" fill="#01579b"/>
+  <circle cx="235" cy="175" r="8" fill="#01579b"/>
+  <ellipse cx="200" cy="250" rx="35" ry="28" fill="#01579b"/>
+  <text x="200" cy="340" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="30" fill="#0277bd" y="340">OMG</text>
+</svg>

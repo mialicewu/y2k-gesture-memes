@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <rect width="400" height="400" rx="24" fill="#cfd8dc"/>
+  <circle cx="200" cy="180" r="95" fill="#b0bec5"/>
+  <ellipse cx="200" cy="210" rx="72" ry="82" fill="#eceff1"/>
+  <path d="M140 120 Q200 90 260 120" stroke="#455a64" stroke-width="8" fill="none"/>
+  <path d="M155 175 Q170 165 185 175" stroke="#37474f" stroke-width="5" fill="none"/>
+  <path d="M215 175 Q230 165 245 175" stroke="#37474f" stroke-width="5" fill="none"/>
+  <path d="M165 245 Q200 220 235 245" stroke="#546e7a" stroke-width="5" fill="none"/>
+  <text x="200" y="340" text-anchor="middle" font-family="Georgia,serif" font-size="30" fill="#455a64">sadge</text>
+</svg>

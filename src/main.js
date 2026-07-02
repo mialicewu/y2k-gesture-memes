@@ -1,6 +1,8 @@
 import "./style.css";
 import { FilesetResolver, HandLandmarker, FaceLandmarker } from "@mediapipe/tasks-vision";
-import { detectGesture, GESTURE_LABELS } from "./gestures.js";
+import { detectMatch, DEFAULT_LABELS } from "./gestures.js";
+
+const asset = (path) => `${import.meta.env.BASE_URL}${path.replace(/^\//, "")}`;
 
 const HAND_CONNECTIONS = [
   [0, 1], [1, 2], [2, 3], [3, 4],
@@ -18,49 +20,29 @@ const FACE_MESH = [
   [152, 148], [148, 176], [176, 149], [149, 150], [150, 136], [136, 172],
   [172, 58], [58, 132], [132, 93], [93, 234], [234, 127], [127, 162],
   [162, 21], [21, 54], [54, 103], [103, 67], [67, 109], [109, 10],
-  [61, 146], [146, 91], [91, 181], [181, 84], [84, 17], [17, 314],
-  [314, 405], [405, 321], [321, 375], [375, 291], [291, 409], [409, 270],
-  [270, 269], [269, 267], [267, 0], [0, 37], [37, 39], [39, 40],
-  [40, 185], [185, 61],
-  [78, 95], [95, 88], [88, 178], [178, 87], [87, 14], [14, 317],
-  [317, 402], [402, 318], [318, 324], [324, 308], [308, 415], [415, 310],
-  [310, 311], [311, 312], [312, 13], [13, 82], [82, 81], [81, 80],
-  [80, 78],
 ];
 
 let handLandmarker = null;
 let faceLandmarker = null;
 let memeCatalog = {};
-let currentGesture = null;
-let stableGesture = null;
+let stableMatch = null;
 let stableCount = 0;
-const STABLE_FRAMES = 8;
+const STABLE_FRAMES = 6;
 
 const state = {
   running: false,
+  modelsReady: false,
   showOverlay: true,
+  cameraStream: null,
 };
 
 function buildUI() {
-  const app = document.getElementById("app");
-  app.innerHTML = `
+  document.getElementById("app").innerHTML = `
     <div class="desktop">
       <aside class="desktop-icons">
-        <button class="desktop-icon" type="button" data-action="webcam">
-          <span class="icon icon-webcam"></span>
-          <span>Webcam</span>
-        </button>
-        <button class="desktop-icon" type="button" data-action="memes">
-          <span class="icon icon-memes"></span>
-          <span>Memes</span>
-        </button>
         <button class="desktop-icon" type="button" data-action="help">
           <span class="icon icon-help"></span>
           <span>Help</span>
-        </button>
-        <button class="desktop-icon" type="button" data-action="recycle">
-          <span class="icon icon-recycle"></span>
-          <span>Recycle Bin</span>
         </button>
       </aside>
 
@@ -79,9 +61,12 @@ function buildUI() {
           </div>
           <div class="window-body webcam-body">
             <div class="video-shell">
-              <video id="video" playsinline muted autoplay></video>
-              <canvas id="overlay"></canvas>
-              <div class="gesture-badge" id="gesture-badge">Waiting for camera…</div>
+              <div class="video-mirror">
+                <video id="video" playsinline muted autoplay></video>
+                <canvas id="overlay"></canvas>
+              </div>
+              <div class="gesture-badge" id="gesture-badge">Click Start Camera</div>
+              <div class="status-pill" id="status-pill">Camera off</div>
               <div class="scanlines"></div>
             </div>
             <fieldset class="controls-fieldset">
@@ -90,11 +75,11 @@ function buildUI() {
                 <button id="start-btn" type="button">Start Camera</button>
                 <button id="overlay-btn" type="button">Hide Overlay</button>
               </div>
-              <p class="hint">Allow camera access, then strike a pose. Matching memes appear below.</p>
+              <p class="hint">Pose + expression both work. Try smiling, winking, thumbs up, or covering your mouth.</p>
             </fieldset>
           </div>
           <div class="status-bar">
-            <p class="status-bar-field">Live</p>
+            <p class="status-bar-field" id="mode-label">Pose + Face</p>
             <p class="status-bar-field" id="fps-label">0 FPS</p>
           </div>
         </div>
@@ -116,20 +101,23 @@ function buildUI() {
               <img id="meme-image" alt="Matching reaction meme" />
               <div class="sticker-shadow"></div>
             </div>
-            <p class="meme-caption" id="meme-caption">Make a gesture to summon a sticker ✨</p>
+            <p class="meme-caption" id="meme-caption">Make a pose or face to summon a sticker</p>
           </div>
         </div>
 
         <div class="window help-window hidden" id="help-window">
           <div class="title-bar">
-            <div class="title-bar-text">Help — Gesture Guide</div>
+            <div class="title-bar-text">Help — Poses &amp; Expressions</div>
             <div class="title-bar-controls">
               <button aria-label="Close" data-close="help-window"></button>
             </div>
           </div>
           <div class="window-body help-body">
-            <ul class="gesture-list" id="gesture-list"></ul>
-            <p class="hint">Drop your own images into <code>public/memes/</code> and edit <code>memes.json</code>.</p>
+            <p><strong>Poses</strong></p>
+            <ul class="gesture-list" id="pose-list"></ul>
+            <p><strong>Expressions</strong></p>
+            <ul class="gesture-list" id="expression-list"></ul>
+            <p class="hint">Add images to <code>public/memes/</code> and edit <code>memes.json</code>.</p>
           </div>
         </div>
       </main>
@@ -148,52 +136,68 @@ function buildUI() {
   `;
 }
 
-function updateClock() {
-  const clock = document.getElementById("clock");
-  if (!clock) return;
-  clock.textContent = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+function setBadge(text) {
+  document.getElementById("gesture-badge").textContent = text;
+}
+
+function setStatus(text) {
+  document.getElementById("status-pill").textContent = text;
 }
 
 function populateHelp() {
-  const list = document.getElementById("gesture-list");
-  if (!list) return;
-  list.innerHTML = Object.entries(GESTURE_LABELS)
-    .map(([key, label]) => `<li><strong>${label}</strong> — try it in front of the camera</li>`)
-    .join("");
+  const poses = document.getElementById("pose-list");
+  const expressions = document.getElementById("expression-list");
+  if (!poses || !expressions) return;
+
+  poses.innerHTML = "";
+  expressions.innerHTML = "";
+
+  for (const [key, entry] of Object.entries(memeCatalog)) {
+    const label = entry.label || DEFAULT_LABELS[key] || key;
+    const li = `<li><strong>${label}</strong></li>`;
+    if (entry.kind === "expression") {
+      expressions.innerHTML += li;
+    } else {
+      poses.innerHTML += li;
+    }
+  }
 }
 
 async function loadMemes() {
-  const res = await fetch("/memes/memes.json");
+  const res = await fetch(asset("memes/memes.json"));
   memeCatalog = await res.json();
 }
 
-function getMemePath(gesture) {
-  const entry = memeCatalog[gesture];
+function getMemePath(key) {
+  const entry = memeCatalog[key];
   if (!entry?.images?.length) return null;
   const pick = entry.images[Math.floor(Math.random() * entry.images.length)];
-  return `/memes/${pick}`;
+  return asset(`memes/${pick}`);
 }
 
-function showMeme(gesture) {
+function labelFor(key) {
+  return memeCatalog[key]?.label || DEFAULT_LABELS[key] || key;
+}
+
+function showMeme(match) {
   const img = document.getElementById("meme-image");
   const caption = document.getElementById("meme-caption");
-  const path = getMemePath(gesture);
+  const path = getMemePath(match.key);
   if (!img || !path) return;
 
-  const label = memeCatalog[gesture]?.label || GESTURE_LABELS[gesture] || gesture;
-  if (img.dataset.gesture !== gesture) {
-    img.dataset.gesture = gesture;
+  const kind = match.kind === "expression" ? "expression" : "pose";
+  if (img.dataset.matchKey !== match.key) {
+    img.dataset.matchKey = match.key;
     img.src = path;
     img.classList.remove("pop");
     void img.offsetWidth;
     img.classList.add("pop");
   }
-  caption.textContent = `${label} detected!`;
+  caption.textContent = `${labelFor(match.key)} (${kind}) detected!`;
 }
 
 function drawLandmarks(ctx, width, height, handResults, faceResults) {
   ctx.clearRect(0, 0, width, height);
-
   if (!state.showOverlay) return;
 
   ctx.lineWidth = 2;
@@ -209,12 +213,6 @@ function drawLandmarks(ctx, width, height, handResults, faceResults) {
       ctx.lineTo((1 - p2.x) * width, p2.y * height);
     }
     ctx.stroke();
-
-    for (const point of landmarks) {
-      ctx.beginPath();
-      ctx.arc((1 - point.x) * width, point.y * height, 1.5, 0, Math.PI * 2);
-      ctx.fill();
-    }
   }
 
   for (const landmarks of handResults?.landmarks ?? []) {
@@ -235,16 +233,16 @@ function drawLandmarks(ctx, width, height, handResults, faceResults) {
   }
 }
 
-async function initModels() {
+async function createLandmarkers(delegate) {
   const vision = await FilesetResolver.forVisionTasks(
-    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm"
+    "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm"
   );
 
   handLandmarker = await HandLandmarker.createFromOptions(vision, {
     baseOptions: {
       modelAssetPath:
         "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task",
-      delegate: "GPU",
+      delegate,
     },
     runningMode: "VIDEO",
     numHands: 2,
@@ -254,40 +252,60 @@ async function initModels() {
     baseOptions: {
       modelAssetPath:
         "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
-      delegate: "GPU",
+      delegate,
     },
     runningMode: "VIDEO",
     numFaces: 1,
+    outputFaceBlendshapes: true,
   });
 }
 
-async function startCamera() {
-  const video = document.getElementById("video");
-  const overlay = document.getElementById("overlay");
-  const badge = document.getElementById("gesture-badge");
-  const startBtn = document.getElementById("start-btn");
+async function initModels() {
+  if (state.modelsReady) return;
+  setStatus("Loading AI models…");
+  try {
+    await createLandmarkers("GPU");
+  } catch {
+    await createLandmarkers("CPU");
+  }
+  state.modelsReady = true;
+  setStatus("AI ready — strike a pose!");
+}
 
+async function openCamera() {
+  if (state.cameraStream) return;
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    throw new Error("Camera API not available. Open the site over HTTPS.");
+  }
+
+  setStatus("Requesting camera…");
   let stream;
   try {
     stream = await navigator.mediaDevices.getUserMedia({
       video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" },
+      audio: false,
     });
   } catch {
-    stream = await navigator.mediaDevices.getUserMedia({ video: true });
+    stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
   }
 
+  const video = document.getElementById("video");
   video.srcObject = stream;
+  state.cameraStream = stream;
   await video.play();
+  setBadge("Camera live — loading AI…");
+  setStatus("Camera on");
+}
 
+function startLoop() {
+  const video = document.getElementById("video");
+  const overlay = document.getElementById("overlay");
   const ctx = overlay.getContext("2d");
   state.running = true;
-  startBtn.textContent = "Camera Running";
-  startBtn.disabled = true;
-  badge.textContent = "Strike a pose!";
 
   let lastTime = performance.now();
   let frameCount = 0;
-  let fps = 0;
 
   const loop = () => {
     if (!state.running) return;
@@ -295,42 +313,46 @@ async function startCamera() {
     const now = performance.now();
     frameCount += 1;
     if (now - lastTime >= 1000) {
-      fps = frameCount;
+      document.getElementById("fps-label").textContent = `${frameCount} FPS`;
       frameCount = 0;
       lastTime = now;
-      document.getElementById("fps-label").textContent = `${fps} FPS`;
     }
 
     if (video.readyState >= 2) {
       overlay.width = video.videoWidth;
       overlay.height = video.videoHeight;
 
-      const timestamp = performance.now();
-      const handResults = handLandmarker.detectForVideo(video, timestamp);
-      const faceResults = faceLandmarker.detectForVideo(video, timestamp);
-      const gesture = detectGesture(handResults, faceResults);
+      if (state.modelsReady) {
+        const timestamp = performance.now();
+        const handResults = handLandmarker.detectForVideo(video, timestamp);
+        const faceResults = faceLandmarker.detectForVideo(video, timestamp);
+        const match = detectMatch(handResults, faceResults);
 
-      drawLandmarks(ctx, overlay.width, overlay.height, handResults, faceResults);
+        drawLandmarks(ctx, overlay.width, overlay.height, handResults, faceResults);
 
-      if (gesture) {
-        currentGesture = gesture;
-        badge.textContent = memeCatalog[gesture]?.label || GESTURE_LABELS[gesture];
+        if (match) {
+          setBadge(labelFor(match.key));
+          document.getElementById("mode-label").textContent =
+            match.kind === "expression" ? "Expression" : "Pose";
 
-        if (gesture === stableGesture) {
-          stableCount += 1;
+          if (match.key === stableMatch?.key) {
+            stableCount += 1;
+          } else {
+            stableMatch = match;
+            stableCount = 1;
+          }
+
+          if (stableCount >= STABLE_FRAMES) {
+            showMeme(match);
+          }
         } else {
-          stableGesture = gesture;
-          stableCount = 1;
-        }
-
-        if (stableCount >= STABLE_FRAMES) {
-          showMeme(gesture);
+          stableMatch = null;
+          stableCount = 0;
+          setBadge("Watching… smile or strike a pose");
+          document.getElementById("mode-label").textContent = "Pose + Face";
         }
       } else {
-        currentGesture = null;
-        stableGesture = null;
-        stableCount = 0;
-        badge.textContent = "No gesture detected";
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
       }
     }
 
@@ -340,32 +362,35 @@ async function startCamera() {
   requestAnimationFrame(loop);
 }
 
+async function startApp() {
+  const btn = document.getElementById("start-btn");
+  btn.disabled = true;
+  btn.textContent = "Starting…";
+
+  try {
+    await openCamera();
+    startLoop();
+    await initModels();
+    setBadge("Watching… smile or strike a pose");
+    btn.textContent = "Camera Running";
+  } catch (err) {
+    console.error(err);
+    btn.disabled = false;
+    btn.textContent = "Retry Camera";
+    setBadge("Camera failed");
+    setStatus(err.message || "Allow camera access and retry");
+  }
+}
+
 function bindEvents() {
-  document.getElementById("start-btn").addEventListener("click", async () => {
-    const btn = document.getElementById("start-btn");
-    btn.textContent = "Loading AI…";
-    btn.disabled = true;
-    try {
-      if (!handLandmarker) await initModels();
-      await startCamera();
-    } catch (err) {
-      console.error(err);
-      btn.textContent = "Retry Camera";
-      btn.disabled = false;
-      document.getElementById("gesture-badge").textContent = "Camera or model failed — check permissions";
-    }
-  });
+  document.getElementById("start-btn").addEventListener("click", startApp);
 
   document.getElementById("overlay-btn").addEventListener("click", () => {
     state.showOverlay = !state.showOverlay;
     document.getElementById("overlay-btn").textContent = state.showOverlay ? "Hide Overlay" : "Show Overlay";
-    if (!state.showOverlay) {
-      const overlay = document.getElementById("overlay");
-      overlay.getContext("2d").clearRect(0, 0, overlay.width, overlay.height);
-    }
   });
 
-  document.querySelector('[data-action="help"]').addEventListener("click", () => {
+  document.querySelector('[data-action="help"]')?.addEventListener("click", () => {
     document.getElementById("help-window").classList.remove("hidden");
   });
 
@@ -376,14 +401,17 @@ function bindEvents() {
 
 async function boot() {
   buildUI();
-  populateHelp();
-  updateClock();
-  setInterval(updateClock, 30_000);
   await loadMemes();
+  populateHelp();
   bindEvents();
+  document.getElementById("meme-image").src = asset("memes/smile.svg");
 
-  const img = document.getElementById("meme-image");
-  img.src = "/memes/wave.svg";
+  const clock = document.getElementById("clock");
+  const tick = () => {
+    clock.textContent = new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  };
+  tick();
+  setInterval(tick, 30_000);
 }
 
 boot();

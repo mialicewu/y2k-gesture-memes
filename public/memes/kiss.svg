@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <rect width="400" height="400" rx="24" fill="#ffcdd2"/>
+  <circle cx="200" cy="180" r="95" fill="#ef9a9a"/>
+  <ellipse cx="200" cy="210" rx="72" ry="82" fill="#ffebee"/>
+  <path d="M130 120 Q200 70 270 120" stroke="#c62828" stroke-width="10" fill="none"/>
+  <circle cx="165" cy="175" r="10" fill="#4a148c"/>
+  <circle cx="235" cy="175" r="10" fill="#4a148c"/>
+  <ellipse cx="200" cy="245" rx="22" ry="14" fill="#e91e63"/>
+  <text x="200" y="340" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="28" fill="#c62828">muah</text>
+</svg>

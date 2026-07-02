@@ -1,34 +1,17 @@
 {
-  "cover_mouth": {
-    "label": "Cover mouth",
-    "images": ["cover-mouth.svg"]
-  },
-  "thumbs_up": {
-    "label": "Thumbs up",
-    "images": ["thumbs-up.svg"]
-  },
-  "peace_sign": {
-    "label": "Peace sign",
-    "images": ["peace-sign.svg"]
-  },
-  "wave": {
-    "label": "Wave",
-    "images": ["wave.svg"]
-  },
-  "facepalm": {
-    "label": "Facepalm",
-    "images": ["facepalm.svg"]
-  },
-  "thinking": {
-    "label": "Thinking",
-    "images": ["thinking.svg"]
-  },
-  "pointing": {
-    "label": "Pointing",
-    "images": ["pointing.svg"]
-  },
-  "shrug": {
-    "label": "Shrug",
-    "images": ["shrug.svg"]
-  }
+  "cover_mouth": { "label": "Cover mouth", "kind": "pose", "images": ["cover-mouth.svg"] },
+  "thumbs_up": { "label": "Thumbs up", "kind": "pose", "images": ["thumbs-up.svg"] },
+  "peace_sign": { "label": "Peace sign", "kind": "pose", "images": ["peace-sign.svg"] },
+  "wave": { "label": "Wave", "kind": "pose", "images": ["wave.svg"] },
+  "facepalm": { "label": "Facepalm", "kind": "pose", "images": ["facepalm.svg"] },
+  "thinking": { "label": "Thinking", "kind": "pose", "images": ["thinking.svg"] },
+  "pointing": { "label": "Pointing", "kind": "pose", "images": ["pointing.svg"] },
+  "shrug": { "label": "Shrug", "kind": "pose", "images": ["shrug.svg"] },
+  "smile": { "label": "Smile", "kind": "expression", "images": ["smile.svg"] },
+  "surprised": { "label": "Surprised", "kind": "expression", "images": ["surprised.svg"] },
+  "angry": { "label": "Angry", "kind": "expression", "images": ["angry.svg"] },
+  "sad": { "label": "Sad", "kind": "expression", "images": ["sad.svg"] },
+  "wink": { "label": "Wink", "kind": "expression", "images": ["wink.svg"] },
+  "kiss": { "label": "Kiss face", "kind": "expression", "images": ["kiss.svg"] },
+  "tongue_out": { "label": "Tongue out", "kind": "expression", "images": ["tongue-out.svg"] }
 }
