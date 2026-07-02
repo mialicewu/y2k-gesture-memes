@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <rect width="400" height="400" rx="24" fill="#80deea"/>
+  <ellipse cx="200" cy="340" rx="90" ry="18" fill="rgba(0,0,0,0.12)"/>
+  <circle cx="200" cy="170" r="95" fill="#b2ebf2"/>
+  <ellipse cx="200" cy="205" rx="72" ry="82" fill="#e0f7fa"/>
+  <path d="M125 115 Q200 55 275 115" stroke="#006064" stroke-width="10" fill="none"/>
+  <circle cx="165" cy="175" r="10" fill="#004d40"/>
+  <circle cx="235" cy="175" r="10" fill="#004d40"/>
+  <path d="M175 220 Q200 245 225 220" stroke="#00838f" stroke-width="5" fill="none"/>
+  <g transform="translate(255 180) rotate(8)">
+    <rect x="0" y="0" width="55" height="70" rx="10" fill="#4dd0e1" stroke="#fff" stroke-width="4"/>
+    <line x1="10" y1="18" x2="45" y2="18" stroke="#fff" stroke-width="3"/>
+    <line x1="10" y1="32" x2="45" y2="32" stroke="#fff" stroke-width="3"/>
+    <line x1="10" y1="46" x2="45" y2="46" stroke="#fff" stroke-width="3"/>
+  </g>
+  <text x="200" y="330" text-anchor="middle" font-family="Verdana,sans-serif" font-size="28" fill="#006064">hey~</text>
+</svg>

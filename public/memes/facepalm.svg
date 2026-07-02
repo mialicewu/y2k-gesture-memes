@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <rect width="400" height="400" rx="24" fill="#ffccbc"/>
+  <ellipse cx="200" cy="340" rx="90" ry="18" fill="rgba(0,0,0,0.12)"/>
+  <circle cx="200" cy="170" r="95" fill="#ffab91"/>
+  <ellipse cx="200" cy="205" rx="72" ry="82" fill="#ffe0b2"/>
+  <path d="M125 115 Q200 55 275 115" stroke="#bf360c" stroke-width="10" fill="none"/>
+  <path d="M145 155 Q165 145 185 155" stroke="#3e2723" stroke-width="4" fill="none"/>
+  <path d="M215 155 Q235 145 255 155" stroke="#3e2723" stroke-width="4" fill="none"/>
+  <path d="M175 235 Q200 220 225 235" stroke="#d84315" stroke-width="4" fill="none"/>
+  <rect x="155" y="95" width="90" height="55" rx="10" fill="#ff8a65" stroke="#fff" stroke-width="4" transform="rotate(-8 200 122)"/>
+  <text x="200" y="330" text-anchor="middle" font-family="Impact,sans-serif" font-size="30" fill="#bf360c">bruh</text>
+</svg>

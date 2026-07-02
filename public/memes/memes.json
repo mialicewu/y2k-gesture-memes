@@ -1,0 +1,34 @@
+{
+  "cover_mouth": {
+    "label": "Cover mouth",
+    "images": ["cover-mouth.svg"]
+  },
+  "thumbs_up": {
+    "label": "Thumbs up",
+    "images": ["thumbs-up.svg"]
+  },
+  "peace_sign": {
+    "label": "Peace sign",
+    "images": ["peace-sign.svg"]
+  },
+  "wave": {
+    "label": "Wave",
+    "images": ["wave.svg"]
+  },
+  "facepalm": {
+    "label": "Facepalm",
+    "images": ["facepalm.svg"]
+  },
+  "thinking": {
+    "label": "Thinking",
+    "images": ["thinking.svg"]
+  },
+  "pointing": {
+    "label": "Pointing",
+    "images": ["pointing.svg"]
+  },
+  "shrug": {
+    "label": "Shrug",
+    "images": ["shrug.svg"]
+  }
+}

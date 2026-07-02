@@ -1,0 +1,330 @@
+@import url("https://fonts.googleapis.com/css2?family=VT323&display=swap");
+
+:root {
+  --desktop-teal: #008080;
+  --neon-green: #00ff41;
+  --window-shadow: 2px 2px 0 #000;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  overflow: hidden;
+  font-family: "Pixelated MS Sans Serif", "MS Sans Serif", Tahoma, sans-serif;
+}
+
+body {
+  background: var(--desktop-teal);
+}
+
+.desktop {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  grid-template-rows: 1fr 28px;
+}
+
+.desktop-icons {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 12px 8px;
+}
+
+.desktop-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 72px;
+  padding: 4px;
+  border: 1px dotted transparent;
+  background: transparent;
+  color: #fff;
+  font-size: 11px;
+  text-shadow: 1px 1px 0 #000;
+  cursor: pointer;
+}
+
+.desktop-icon:hover,
+.desktop-icon:focus {
+  border-color: #fff;
+  outline: none;
+}
+
+.icon {
+  width: 32px;
+  height: 32px;
+  image-rendering: pixelated;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+.icon-webcam {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect x='4' y='10' width='18' height='12' fill='%23c0c0c0' stroke='%23000'/%3E%3Cpolygon points='22,12 28,9 28,23 22,20' fill='%23c0c0c0' stroke='%23000'/%3E%3Ccircle cx='13' cy='16' r='4' fill='%23008080'/%3E%3C/svg%3E");
+}
+
+.icon-memes {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect x='6' y='8' width='20' height='16' fill='%23ffff80' stroke='%23000'/%3E%3Ccircle cx='12' cy='14' r='2' fill='%23000'/%3E%3Cpath d='M10 20 Q16 24 22 20' stroke='%23000' fill='none'/%3E%3C/svg%3E");
+}
+
+.icon-help {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect x='8' y='4' width='16' height='22' fill='%23ffff80' stroke='%23000'/%3E%3Ctext x='16' y='18' text-anchor='middle' font-size='12' fill='%23000'%3F%3E%3C/text%3E%3C/svg%3E");
+}
+
+.icon-recycle {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32'%3E%3Crect x='10' y='10' width='12' height='14' fill='%23c0c0c0' stroke='%23000'/%3E%3Cpath d='M12 10 L16 6 L20 10' stroke='%23000' fill='none'/%3E%3C/svg%3E");
+}
+
+.desktop-windows {
+  position: relative;
+  padding: 16px;
+  min-width: 0;
+}
+
+.window {
+  position: absolute;
+  width: min(520px, calc(100vw - 140px));
+  box-shadow: var(--window-shadow);
+}
+
+.webcam-window {
+  top: 16px;
+  left: 16px;
+  z-index: 2;
+}
+
+.memes-window {
+  top: 280px;
+  left: 120px;
+  width: min(360px, calc(100vw - 160px));
+  z-index: 1;
+}
+
+.help-window {
+  top: 80px;
+  left: 200px;
+  width: 320px;
+  z-index: 3;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.title-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 4px;
+  vertical-align: -3px;
+  background-size: contain;
+}
+
+.title-icon-webcam {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect x='1' y='4' width='10' height='8' fill='%23fff' stroke='%23000'/%3E%3Cpolygon points='11,5 15,3 15,13 11,11' fill='%23fff' stroke='%23000'/%3E%3C/svg%3E");
+}
+
+.title-icon-memes {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16'%3E%3Crect x='2' y='2' width='12' height='12' fill='%23ff0' stroke='%23000'/%3E%3C/svg%3E");
+}
+
+.webcam-body {
+  padding: 8px;
+}
+
+.video-shell {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border: 2px inset #808080;
+  overflow: hidden;
+}
+
+#video,
+#overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+#overlay {
+  pointer-events: none;
+}
+
+.gesture-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 2;
+  padding: 4px 8px;
+  background: rgba(192, 192, 192, 0.85);
+  border: 1px solid #000;
+  font-family: "VT323", monospace;
+  font-size: 22px;
+  letter-spacing: 0.5px;
+  color: #000;
+  transform: scaleX(-1);
+}
+
+.scanlines {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0) 0,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 0, 0, 0.08) 2px,
+    rgba(0, 0, 0, 0.08) 4px
+  );
+  mix-blend-mode: multiply;
+}
+
+.controls-fieldset {
+  margin-top: 8px;
+}
+
+.hint {
+  margin: 8px 0 0;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.meme-body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  min-height: 260px;
+  background: linear-gradient(180deg, #c0c0c0 0%, #dfdfdf 100%);
+}
+
+.sticker-frame {
+  position: relative;
+  width: 220px;
+  height: 220px;
+  display: grid;
+  place-items: center;
+}
+
+#meme-image {
+  width: 200px;
+  height: 200px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 0 rgba(0, 0, 0, 0.15));
+  transition: transform 0.2s ease;
+}
+
+#meme-image.pop {
+  animation: sticker-pop 0.35s ease;
+}
+
+@keyframes sticker-pop {
+  0% { transform: scale(0.7) rotate(-8deg); opacity: 0.5; }
+  60% { transform: scale(1.08) rotate(2deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+.sticker-shadow {
+  position: absolute;
+  bottom: 8px;
+  width: 140px;
+  height: 18px;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.25), transparent 70%);
+}
+
+.meme-caption {
+  margin: 0;
+  font-family: "VT323", monospace;
+  font-size: 24px;
+  text-align: center;
+}
+
+.help-body {
+  max-height: 280px;
+  overflow: auto;
+}
+
+.gesture-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.taskbar {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+  background: #c0c0c0;
+  border-top: 2px solid #fff;
+  box-shadow: inset 0 1px 0 #dfdfdf;
+}
+
+.start-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: bold;
+  min-width: 54px;
+}
+
+.start-logo {
+  width: 16px;
+  height: 14px;
+  background: linear-gradient(135deg, #ff0000 25%, #00ff00 25% 50%, #0000ff 50% 75%, #ffff00 75%);
+  border: 1px solid #000;
+}
+
+.taskbar-tabs {
+  flex: 1;
+}
+
+.task-tab {
+  min-width: 140px;
+  font-size: 11px;
+}
+
+.taskbar-clock {
+  min-width: 72px;
+  padding: 2px 8px;
+  border: 1px inset #808080;
+  background: #c0c0c0;
+  font-size: 11px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .desktop {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr 28px;
+    overflow: auto;
+  }
+
+  .desktop-icons {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+
+  .desktop-windows {
+    min-height: 720px;
+  }
+
+  .memes-window {
+    top: 420px;
+    left: 16px;
+  }
+}

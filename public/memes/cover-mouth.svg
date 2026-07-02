@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffb6c1"/>
+      <stop offset="100%" stop-color="#ff69b4"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="400" rx="24" fill="url(#bg)"/>
+  <ellipse cx="200" cy="340" rx="90" ry="18" fill="rgba(0,0,0,0.15)"/>
+  <circle cx="200" cy="170" r="95" fill="#ffd1dc"/>
+  <ellipse cx="200" cy="200" rx="70" ry="85" fill="#ffe4e1"/>
+  <path d="M130 120 Q200 70 270 120" stroke="#8b4513" stroke-width="8" fill="none"/>
+  <ellipse cx="165" cy="175" rx="14" ry="18" fill="#fff"/>
+  <ellipse cx="235" cy="175" rx="14" ry="18" fill="#fff"/>
+  <circle cx="165" cy="178" r="7" fill="#4a148c"/>
+  <circle cx="235" cy="178" r="7" fill="#4a148c"/>
+  <path d="M185 230 Q200 210 215 230" stroke="#c2185b" stroke-width="4" fill="none"/>
+  <rect x="150" y="215" width="100" height="70" rx="12" fill="#ffb6c1" stroke="#fff" stroke-width="4"/>
+  <text x="200" y="265" text-anchor="middle" font-family="Arial Black,sans-serif" font-size="28" fill="#fff">oops</text>
+</svg>
